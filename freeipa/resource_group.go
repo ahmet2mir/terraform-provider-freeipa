@@ -6,9 +6,11 @@ import (
 )
 
 const (
-	groupSchemaGid         = "gid"
-	groupSchemaGidNumber   = "gid_number"
-	groupSchemaDescription = "description"
+	groupSchemaGid          = "gid"
+	groupSchemaGidNumber    = "gid_number"
+	groupSchemaDescription  = "description"
+	groupSchemaGroups       = "groups"
+	groupSchemaGroupMembers = "group_members"
 )
 
 func resourceGroup() *schema.Resource {
@@ -37,6 +39,18 @@ func resourceGroup() *schema.Resource {
 				Type:     schema.TypeString,
 				Optional: true,
 				Default:  "",
+			},
+			groupSchemaGroups: &schema.Schema{
+				Type:     schema.TypeSet,
+				Optional: true,
+				Computed: true,
+				Elem:     &schema.Schema{Type: schema.TypeString},
+			},
+			groupSchemaGroupMembers: &schema.Schema{
+				Type:     schema.TypeSet,
+				Optional: true,
+				Computed: true,
+				Elem:     &schema.Schema{Type: schema.TypeString},
 			},
 		},
 	}
@@ -68,6 +82,38 @@ func resourceGroupCreate(d *schema.ResourceData, m interface{}) error {
 	}
 
 	d.SetId(string(groupRec.IpaUniqueId))
+
+	groupsInterface, ok := d.GetOk(groupSchemaGroups)
+	if ok {
+		groupsRaw := groupsInterface.(*schema.Set)
+		if groupsRaw.Len() > 0 {
+			groups := make([]string, groupsRaw.Len())
+			for i, d := range groupsRaw.List() {
+				groups[i] = d.(string)
+			}
+
+			err = c.client.GroupSyncGroups(gid, groups, false)
+			if err != nil {
+				return err
+			}
+		}
+	}
+
+	groupMembersInterface, ok := d.GetOk(groupSchemaGroupMembers)
+	if ok {
+		groupsRaw := groupMembersInterface.(*schema.Set)
+		if groupsRaw.Len() > 0 {
+			groups := make([]string, groupsRaw.Len())
+			for i, d := range groupsRaw.List() {
+				groups[i] = d.(string)
+			}
+
+			err = c.client.GroupSyncGroups(gid, groups, true)
+			if err != nil {
+				return err
+			}
+		}
+	}
 
 	return nil
 }
@@ -106,6 +152,15 @@ func resourceGroupRead(d *schema.ResourceData, m interface{}) error {
 		return err
 	}
 
+	err = d.Set(groupSchemaGroups, rec.Groups)
+	if err != nil {
+		return err
+	}
+
+	err = d.Set(groupSchemaGroupMembers, rec.GroupMembers)
+	if err != nil {
+		return err
+	}
 	return nil
 }
 
@@ -140,6 +195,32 @@ func resourceGroupUpdate(d *schema.ResourceData, m interface{}) error {
 		_, newValue := d.GetChange(groupSchemaDescription)
 		c.client.GroupUpdateDescription(*gid, newValue.(string))
 		d.SetPartial(groupSchemaDescription)
+	}
+
+	if d.HasChange(groupSchemaGroups) {
+		_, newValueInterface := d.GetChange(groupSchemaGroups)
+
+		groupsRaw := newValueInterface.(*schema.Set)
+		newValue := make([]string, groupsRaw.Len())
+		for i, d := range groupsRaw.List() {
+			newValue[i] = d.(string)
+		}
+
+		c.client.GroupSyncGroups(*gid, newValue, false)
+		d.SetPartial(groupSchemaGroups)
+	}
+
+	if d.HasChange(groupSchemaGroupMembers) {
+		_, newValueInterface := d.GetChange(groupSchemaGroupMembers)
+
+		groupsRaw := newValueInterface.(*schema.Set)
+		newValue := make([]string, groupsRaw.Len())
+		for i, d := range groupsRaw.List() {
+			newValue[i] = d.(string)
+		}
+
+		c.client.GroupSyncGroups(*gid, newValue, true)
+		d.SetPartial(groupSchemaGroupMembers)
 	}
 
 	d.Partial(false)

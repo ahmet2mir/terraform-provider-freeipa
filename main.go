@@ -1,7 +1,7 @@
 package main
 
 import (
-	"github.com/fiveai/terraform-provider-freeipa/freeipa"
+	"github.com/ahmet2mir/terraform-provider-freeipa/freeipa"
 	"github.com/hashicorp/terraform/plugin"
 	"github.com/hashicorp/terraform/terraform"
 )

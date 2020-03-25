@@ -1,3 +1,15 @@
+[![Build Status](https://travis-ci.com/ahmet2mir/terraform-provider-freeipa.svg?branch=master)](https://travis-ci.com/ahmet2mir/terraform-provider-freeipa)
+
+/!\/!\/!\/!\/!\/!\/!\
+
+This a fork of https://github.com/fiveai/terraform-provider-freeipa
+Provider use my fork of GoIPA package from which is a fork of https://github.com/fiveai/goapi
+which is a fork from https://github.com/ubccr/goipa
+
+See https://github.com/ubccr/goipa/issues/4
+
+/!\/!\/!\/!\/!\/!\/!\
+
 # terraform-provider-freeipa
 
 ## Build
@@ -18,7 +30,7 @@ make dist
 
 For a test example you might not of configured your own certificates. If so
 please download the self-signed certs from `<your-domain>/ipa/config/ca.crt` and
-put save to `/etc/ipa/ca.crt`
+put save to `/etc/ipa/ca.crt`, you could also trust IPA CA on system wide.
 
 ```tf
 provider "freeipa" {
@@ -35,7 +47,7 @@ Arguments:
 * `password` - password for authentication (string, required)
 * `base_dn` - domain components (dc), example: *dc=ipa,dc=example,dc=com* (string, required)
 
-### User
+### Resource User
 
 ```tf
 resource "freeipa_user" "user" {
@@ -58,13 +70,26 @@ Arguments:
 * `uid_number` - User ID (string, optional, computed)
 * `gid_number` - Group ID (string, optional, computed)
 
-### Group
+### Datasouce User
+
+```tf
+data "freeipa_user" "user" {
+  uid = var.uid
+}
+```
+
+Arguments:
+* `uid` - User name (string, required)
+
+### Resource Group
 
 ```tf
 resource "freeipa_user" "user" {
-  gid         = var.gid
-  gid_number  = var.gid_number
-  description = var.description
+  gid           = var.gid
+  gid_number    = var.gid_number
+  description   = var.description
+  groups        = var.groups
+  group_members = var.group_members
 }
 ```
 
@@ -72,6 +97,19 @@ Arguments:
 * `gid` - Group Name (string, required)
 * `gid_number` - Group ID (string, optional, computed)
 * `description` - Description for group (string, optional, default: "")
+* `groups` - Groups group will be added to (set/list, optional, computed)(attribute memberof)
+* `group_members` - Group groups will be added to (set/list, optional, computed)(attribute member)
+
+### Datasouce Group
+
+```tf
+data "freeipa_group" "group" {
+  gid = var.gid
+}
+```
+
+Arguments:
+* `gid` - Group Name (string, required)
 
 ### Import
 
